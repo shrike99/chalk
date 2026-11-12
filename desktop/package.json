@@ -1,0 +1,102 @@
+{
+  "name": "chalk",
+  "productName": "Chalk",
+  "version": "2.0.0",
+  "description": "Think out loud. Learn it one step at a time.",
+  "author": "The Chalk authors",
+  "license": "MIT",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "cross-env CHALK_DEV_URL=http://127.0.0.1:5173 electron .",
+    "build:ui": "cd ../frontend && npm install && npm run build",
+    "fetch-uv": "node scripts/fetch-uv.js",
+    "dist": "npm run build:ui && npm run fetch-uv && electron-builder --win nsis --x64 --publish never",
+    "dist:dir": "npm run build:ui && npm run fetch-uv && electron-builder --win dir --x64 --publish never"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "electron": "^45.2.0",
+    "electron-builder": "^26.0.12",
+    "resedit": "^3.0.0",
+    "pe-library": "^2.0.0"
+  },
+  "build": {
+    "appId": "app.chalk.desktop",
+    "productName": "Chalk",
+    "copyright": "Copyright \u00a9 2026 The Chalk authors",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "setup.html",
+      "setup.js",
+      "assets/**",
+      "build/icon.ico",
+      "build/icon.png",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../backend",
+        "to": "backend",
+        "filter": [
+          "*.py",
+          "*.md",
+          "requirements.txt",
+          "requirements-voice.txt",
+          "harness/**",
+          "!data/**",
+          "!tests/**",
+          "!**/__pycache__/**",
+          "!settings.json"
+        ]
+      },
+      {
+        "from": "../frontend/dist",
+        "to": "ui"
+      },
+      {
+        "from": "vendor/uv",
+        "to": "uv",
+        "filter": [
+          "uv.exe"
+        ]
+      }
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false,
+      "executableName": "Chalk"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "shortcutName": "Chalk",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "artifactName": "Chalk-Setup-${version}.exe"
+    },
+    "afterPack": "scripts/after-pack.js",
+    "publish": null
+  }
+}

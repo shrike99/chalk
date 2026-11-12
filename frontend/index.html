@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chalk</title>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <script>
+      // apply the theme before anything paints, so there's no flash of the wrong one
+      (function () {
+        var t = localStorage.getItem("chalk.theme") || "system";
+        var dark = t === "dark" || (t === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="app" class="app is-browser">
+      <!-- Title bar (Windows draws minimise / maximise / close on the right) -->
+      <header class="titlebar">
+        <div class="tb-left">
+          <button id="sidebarToggle" class="icon-btn" data-icon="sidebar" aria-label="Show or hide the notes list" title="Notes list (Ctrl+\)"></button>
+          <img id="tbMark" class="tb-mark" src="/brand/icon-f.svg" alt="" />
+          <span class="tb-brand">Chalk</span>
+        </div>
+        <div id="crumb" class="tb-crumb"></div>
+        <div class="tb-right"><div class="tb-controls"></div></div>
+      </header>
+
+      <!-- The main view: notes, notebook, canvas -->
+      <div id="mainView" class="body">
+        <nav class="sidebar" aria-label="Notes">
+          <div class="sb-top">
+            <button id="sbSearch" class="sb-search" data-icon="search"><span>Search</span><small>Ctrl K</small></button>
+            <button id="sbNew" class="sb-new" data-icon="plus" aria-label="New note" title="New note (Ctrl+N)"></button>
+          </div>
+          <div id="noteList" class="sb-list"></div>
+          <div class="sb-foot">
+            <button id="usageMini" class="usage-mini" hidden title="">
+              <div class="usage-row"><span id="usageMiniName">Pro usage</span><span id="usageMiniText"></span></div>
+              <div class="bar"><div id="usageMiniBar"></div></div>
+              <div id="usageMiniWeek" class="usage-week" hidden></div>
+            </button>
+            <button id="openSettings" class="sb-settings" data-icon="sliders">Settings</button>
+          </div>
+        </nav>
+
+        <section id="docView" class="docview" hidden aria-label="Document"></section>
+        <div id="dropZone" class="drop-zone" hidden><div><span data-icon="paperclip"></span><b>Drop to give these to Claude</b><span>PDFs and images: past papers, worksheets, photos of your notes</span></div></div>
+
+        <main id="notebook" class="notebook" aria-label="Notebook">
+          <div class="nb-inner">
+            <div class="nb-head">
+              <h1 id="noteTitle" class="nb-title" contenteditable="plaintext-only" spellcheck="false" aria-label="Note title"></h1>
+              <div id="noteMeta" class="nb-meta"></div>
+            </div>
+            <div id="carryCard" class="carry-card" hidden></div>
+            <div id="firstRun" class="first-run" hidden>
+              <p class="big">Hold <kbd>Space</kbd> and tell me what you're trying to understand.</p>
+              <label class="type-here">
+                <textarea id="firstInput" rows="1" aria-label="Your first message" spellcheck="true"></textarea>
+                <span class="ph" aria-hidden="true">Or just start typing here<span class="caret"></span></span>
+              </label>
+            </div>
+            <div id="log" class="entries" aria-live="polite"></div>
+            <div id="ctxNudge" class="ctx-nudge" hidden></div>
+          </div>
+        </main>
+
+        <section id="canvas" class="canvas" aria-label="Claude's canvas">
+          <div class="canvas-card">
+            <div class="cv-head">
+              <div class="cv-title">
+                <button id="hPrev" class="icon-btn sm" data-icon="prev" aria-label="Earlier visual" title="Earlier visual"></button>
+                <span id="caption"></span>
+                <button id="hNext" class="icon-btn sm" data-icon="next" aria-label="Later visual" title="Later visual"></button>
+              </div>
+              <div class="cv-tools">
+                <button id="drawOnCanvas" class="icon-btn" data-icon="pen" aria-label="Draw on this" title="Draw on this"></button>
+                <button id="expandBtn" class="icon-btn" data-icon="expand" aria-label="Expand canvas" title="Expand canvas"></button>
+              </div>
+            </div>
+            <div id="exView" class="ex-view" hidden aria-label="Exercise"></div>
+            <div id="stageArea" class="stage-area">
+              <div id="diagram" class="diagram"></div>
+              <div id="anim" class="diagram anim-host" hidden></div>
+              <div id="cvEmpty" class="cv-empty">
+                <img src="/brand/empty-mark.svg" width="56" height="56" alt="" />
+                <span>Diagrams appear here as we talk.</span>
+              </div>
+              <div id="wb" class="wb" hidden>
+                <div class="wb-bar">
+                  <div class="wb-group">
+                    <button data-mode="visual" title="Draw on top of Claude's visual">On the visual</button>
+                    <button data-mode="blank" title="A blank page">Blank page</button>
+                  </div>
+                  <div class="wb-group">
+                    <button class="swatch" data-color="#1D1D1F" style="--c:#1D1D1F" title="Graphite"></button>
+                    <button class="swatch" data-color="#4A55D4" style="--c:#4A55D4" title="Indigo"></button>
+                    <button class="swatch" data-color="#C2410C" style="--c:#C2410C" title="Orange"></button>
+                    <button class="swatch" data-color="#2F7A3C" style="--c:#2F7A3C" title="Green"></button>
+                    <button class="size" data-size="3" title="Thin">●</button>
+                    <button class="size big" data-size="7" title="Thick">●</button>
+                    <button data-tool="eraser" title="Eraser">Eraser</button>
+                  </div>
+                  <div class="wb-group">
+                    <button data-tool="undo" title="Undo (Ctrl+Z)">Undo</button>
+                    <button data-tool="clear">Clear</button>
+                    <button id="wbDone" class="done" title="Keep the drawing attached and close">Done</button>
+                  </div>
+                </div>
+                <canvas class="wb-canvas"></canvas>
+                <div class="wb-tip">Draw, then type or hold <kbd class="sm">Space</kbd> and talk: your drawing goes with your message.</div>
+              </div>
+            </div>
+            <div class="cv-foot">
+              <div class="nav">
+                <button id="wRestart" class="icon-btn" data-icon="first" aria-label="First step" title="First step"></button>
+                <button id="wPrev" class="icon-btn" data-icon="prev" aria-label="Previous step" title="Previous step (←)"></button>
+                <button id="wNext" class="icon-btn" data-icon="next" aria-label="Next step" title="Next step (→)"></button>
+              </div>
+              <div id="wDots" class="steps"></div>
+              <div class="cv-right">
+                <span id="wLabel" class="caption"></span>
+                <button id="wPlay" class="icon-btn" aria-label="Replay" title="Replay"></button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Settings and the welcome screen replace the main view when open -->
+      <div id="settingsView" class="settings-view" hidden></div>
+      <div id="welcomeView" class="welcome" hidden></div>
+
+      <!-- Bottom bar: mode, voice orb, composer, mute -->
+      <footer id="bottombar" class="bottombar">
+        <div id="modeSeg" class="seg" role="group" aria-label="Mode">
+          <button data-mode="tutor" title="Explains one step at a time and checks you've got it">Tutor</button>
+          <button data-mode="partner" title="Thinking partner: listens, asks why, rarely explains">Partner</button>
+          <button data-mode="quiz" title="Asks you questions and revisits weak spots">Quiz</button>
+          <button data-mode="answer" title="Just answers, directly">Answer</button>
+        </div>
+        <div class="bb-center">
+          <div class="above">
+            <div id="toast" class="toast" hidden role="status"></div>
+            <div id="attachChip" class="attach" hidden>
+              <img id="attachThumb" alt="Your drawing" />
+              <span>Drawing attached: it goes with your next message</span>
+              <button type="button" id="attachEdit" class="link">Edit</button>
+              <button type="button" id="attachRemove" class="link">Remove</button>
+            </div>
+            <div id="fileTray" class="file-tray" hidden aria-label="Files for Claude"></div>
+            <div id="pasteNote" class="toast" hidden>That looked like code, so it went in a code box. <button type="button" id="pasteUndo" class="link">Keep as text</button></div>
+            <div id="codeBoxes" class="codeboxes" hidden></div>
+          </div>
+          <div id="orb" class="orb" data-state="idle">
+            <span class="pulse"></span><span class="pulse p2"></span>
+            <button id="mic" type="button" aria-label="Hold to talk" title="Hold to talk (or hold Space)">
+              <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10v1a7 7 0 0 1-14 0v-1"/><path d="M12 18v4"/></svg>
+              <span class="eq"></span><span class="eq"></span><span class="eq"></span><span class="eq"></span>
+            </button>
+            <span class="spin"></span><span class="think-dots"><i></i><i></i><i></i></span>
+            <span class="rec-dot"></span>
+          </div>
+          <form id="composer" class="composer">
+            <label for="input" class="sr-only">Message</label>
+            <textarea id="input" rows="1" placeholder="Hold Space to talk, or type…"></textarea>
+            <button type="button" id="attachBtn" class="icon-btn" data-icon="paperclip" aria-label="Attach PDFs or images" title="Attach PDFs or images (or drop them anywhere)"></button>
+            <input type="file" id="fileInput" multiple accept=".pdf,application/pdf,image/*" hidden />
+            <button type="button" id="codeBtn" class="icon-btn" data-icon="code" aria-label="Write code" title="Write code (or type ```)"></button>
+            <button type="button" id="drawBtn" class="icon-btn" data-icon="pen" aria-label="Draw" title="Draw (sent with your message)"></button>
+            <button type="submit" id="send" class="send" data-icon="send" aria-label="Send"></button>
+          </form>
+          <div id="listen" class="listen" hidden aria-live="polite">
+            <div class="listen-head">
+              <span id="recState" class="listen-state">Listening</span>
+              <span id="recTime" class="listen-time">0:00</span>
+              <canvas id="recWave" width="400" height="44"></canvas>
+            </div>
+            <p id="recText" class="listen-text placeholder"></p>
+          </div>
+        </div>
+        <div class="bb-right">
+          <div id="bbHint" class="bb-hint"></div>
+          <button id="muteBtn" class="mute" aria-label="Mute Claude's voice" title="Mute Claude's voice"></button>
+        </div>
+      </footer>
+    </div>
+
+    <div id="palette" hidden></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

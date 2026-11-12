@@ -1,0 +1,20 @@
+# dependencies and build output
+node_modules/
+dist/
+desktop/vendor/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# local data (notes, uploads, settings) and downloaded toolchains
+backend/data/
+backend/toolchains/
+settings.json
+*.db
+
+# editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
